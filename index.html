@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asesmen Sumatif SKI - Kelas VIII</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .print-only { display: none; }
+        @media print {
+            body { background-color: white; }
+            .no-print { display: none !important; }
+            .print-only { display: block; }
+            .print-container { width: 100%; max-width: 100%; padding: 0; margin: 0; box-shadow: none; }
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased h-screen flex flex-col">
+
+    <div id="app" class="flex-grow flex flex-col w-full max-w-5xl mx-auto md:p-4">
+        <!-- Dynamic Content Will Be Injected Here -->
+    </div>
+
+    <script>
+        // Default Data Configuration
+        const APP_TITLE = "Asesmen Sumatif Sejarah Kebudayaan Islam";
+        const CREATOR = "Amirotul Kayyisah, S.Pd.";
+        const KKM = 80;
+        const TIME_LIMIT = 90 * 60; // 90 minutes in seconds
+        
+        let appState = {
+            admin: { username: 'admin', password: 'password' },
+            settings: {
+                logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Logo_Kementerian_Agama_Republik_Indonesia.png/600px-Logo_Kementerian_Agama_Republik_Indonesia.png' // Default logo Kemenag
+            },
+            students: {}, // Format: "Presensi_Nama": { attempts: 0, scores: [] }
+            currentUser: null, // { role: 'admin' | 'student', name, presensi }
+            exam: {
+                isActive: false,
+                timeLeft: TIME_LIMIT,
+                answers: {}, // { qId: answer }
+                timerInterval: null
+            }
+        };
+
+        // Bank Soal
+        let questionBank = {
+            mc: [
+                { id: 'm1', text: "Sebuah komunitas masyarakat mengalami pergolakan karena merasa pembagian kekuasaan dan kekayaan negara tidak adil, didominasi oleh satu kelompok elit saja. Situasi ini mirip dengan akhir masa Umayyah. Kelompok mana yang merasa dianaktirikan dan akhirnya menjadi pendukung utama berdirinya Daulah Abbasiyah?", options: ["Kaum Khawarij", "Kaum Mawali", "Kaum Qadariyah", "Kaum Nasrani"], answer: 1 },
+                { id: 'm2', text: "Abu al-Abbas as-Saffah memindahkan pusat pemerintahan dari Damaskus untuk menjauhi sisa-sisa pengaruh Umayyah dan mencari basis dukungan yang kuat. Jika Anda seorang pemimpin yang mencari basis yang strategis secara militer dan ekonomi saat itu, wilayah mana yang paling tepat dan menjadi pilihan pertama sebelum ke Baghdad?", options: ["Kufah", "Mekkah", "Kairo", "Kordoba"], answer: 0 },
+                { id: 'm3', text: "Saat sebuah negara menetapkan kebijakan inklusif, berbagai suku bangsa dapat menduduki jabatan penting. Hal ini terjadi pada masa Abbasiyah dimana orang-orang Persia mendapat posisi tinggi. Dampak paling signifikan dari kebijakan ini terhadap peradaban Abbasiyah adalah...", options: ["Melemahnya kekuatan militer", "Asimilasi budaya dan pesatnya ilmu pengetahuan", "Pemberontakan dari kaum Arab murni", "Timbulnya sistem monarki absolut"], answer: 1 },
+                { id: 'm4', text: "Banyak negara modern mengalokasikan dana besar untuk lembaga riset nasional. Khalifah Al-Ma'mun melakukan hal serupa di masanya dengan mengembangkan institusi secara maksimal. Institusi apakah yang fungsinya setara dengan lembaga riset dan penerjemahan nasional tersebut?", options: ["Nizamiyah", "Baitul Hikmah", "Kuttab", "Madrasah Mustansyiriyah"], answer: 1 },
+                { id: 'm5', text: "Seorang dokter di rumah sakit modern sedang memeriksa rekam medis pasien menggunakan prinsip observasi klinis sebelum memberi diagnosis. Tradisi observasi klinis sistematis ini banyak dipelopori oleh ilmuwan Abbasiyah yang menulis buku 'Al-Hawi'. Siapakah tokoh yang dimaksud?", options: ["Ibnu Sina", "Ar-Razi", "Al-Khawarizmi", "Al-Kindi"], answer: 1 },
+                { id: 'm6', text: "Dalam merancang sebuah jembatan gantung, insinyur sangat bergantung pada perhitungan sudut, panjang, dan gravitasi. Ilmu pasti semacam ini berkembang pesat di masa Abbasiyah. Siapakah ilmuwan Muslim yang dijuluki bapak Aljabar yang karyanya menjadi dasar algoritma modern?", options: ["Al-Farabi", "Al-Battani", "Al-Khawarizmi", "Jabir bin Hayyan"], answer: 2 },
+                { id: 'm7', text: "Ketika sebuah pandemi terjadi, pemerintah segera membangun fasilitas isolasi dan pengobatan gratis. Nilai humanis ini telah diterapkan pada masa Harun ar-Rasyid dengan mendirikan fasilitas kesehatan yang disebut...", options: ["Bimaristan", "Observatorium", "Perpustakaan", "Panti Asuhan"], answer: 0 },
+                { id: 'm8', text: "Di era digital, informasi dari berbagai bahasa dapat diterjemahkan dalam hitungan detik. Di masa Abbasiyah, gerakan penerjemahan besar-besaran (dari bahasa Yunani, Persia, India ke bahasa Arab) difasilitasi oleh negara. Tujuan utama gerakan ini secara historis adalah...", options: ["Menghancurkan budaya asli bangsa taklukan", "Menyerap pengetahuan dari peradaban masa lalu untuk dikembangkan", "Menyebarkan ajaran Islam ke Eropa", "Mencari kelemahan taktik perang bangsa Romawi"], answer: 1 },
+                { id: 'm9', text: "Seorang apoteker meracik obat kimia berdasarkan takaran yang presisi agar aman bagi manusia. Pengetahuan tentang distilasi, kristalisasi, dan sifat zat kimia pertama kali diletakkan fondasinya oleh ilmuwan Abbasiyah bernama...", options: ["Al-Ghazali", "Ibnu Rusyd", "Jabir bin Hayyan", "Ibnu Khaldun"], answer: 2 },
+                { id: 'm10', text: "Sebuah observatorium modern menggunakan teleskop canggih untuk memprediksi gerhana. Di masa Daulah Abbasiyah, ilmu falak (astronomi) sangat penting tidak hanya untuk sains, tetapi juga untuk kepentingan agama, yaitu...", options: ["Menentukan arah kiblat dan waktu salat", "Meramal masa depan khalifah", "Mencari jalur pelayaran baru", "Mendeteksi keberadaan alien"], answer: 0 },
+                { id: 'm11', text: "Anda membaca sebuah buku filsafat yang berusaha memadukan pemikiran Aristoteles dengan ajaran Islam. Upaya rasionalisasi ini merupakan ciri khas dinamika ilmu pada masa Abbasiyah yang dipelopori oleh tokoh bergelar 'Guru Kedua' (Al-Mu’allim Ats-Tsani), yaitu...", options: ["Al-Kindi", "Al-Farabi", "Ibnu Tufail", "Ibnu Bajjah"], answer: 1 },
+                { id: 'm12', text: "Jika Anda melihat peta tata kota yang berbentuk bundar dengan istana di tengah dan dijaga oleh tembok berlapis, kota ini dirancang untuk keamanan tingkat tinggi dan simbol kebesaran. Kota yang dibangun oleh Khalifah Al-Mansur ini adalah...", options: ["Damaskus", "Samarra", "Baghdad", "Kairo"], answer: 2 },
+                { id: 'm13', text: "Banyak mahasiswa kedokteran di Eropa Barat pada abad pertengahan mempelajari buku 'Qanun fi at-Tibb' (The Canon of Medicine) sebagai buku teks wajib. Buku ensiklopedia medis legendaris ini ditulis oleh...", options: ["Ibnu Sina", "Ar-Razi", "Az-Zahrawi", "Ibnu Nafis"], answer: 0 },
+                { id: 'm14', text: "Bayangkan sebuah perpustakaan nasional dihancurkan dan koleksi bukunya dibuang ke sungai hingga airnya menghitam karena tinta. Peristiwa tragis ini menandai berakhirnya masa keemasan Abbasiyah di Baghdad akibat serangan dari...", options: ["Pasukan Salib", "Pasukan Mongol (Hulagu Khan)", "Kekaisaran Romawi Timur", "Dinasti Fatimiyah"], answer: 1 },
+                { id: 'm15', text: "Kemajuan ekonomi seringkali mendorong kemajuan literasi. Di masa Abbasiyah, industri yang diadopsi dari tawanan perang Cina sangat memicu laju produksi buku dan ilmu pengetahuan. Industri tersebut adalah...", options: ["Industri sutra", "Industri kertas", "Industri mesiu", "Industri keramik"], answer: 1 }
+            ],
+            complex: [
+                { id: 'c1', text: "Dalam mengelola sebuah imperium yang luas, Daulah Abbasiyah menyadari perlunya sistem administrasi yang rapi. Dari pernyataan berikut, manakah yang merupakan langkah strategis yang diambil Abbasiyah untuk memperkuat roda pemerintahan? (Pilih semua yang benar)", options: ["Membentuk posisi Wazir (Perdana Menteri)", "Menghapus sistem pajak bagi non-Muslim", "Mendirikan Diwanul Jund (Departemen Militer)", "Memindahkan ibu kota ke Andalusia", "Mengadopsi sistem tata negara Persia"], answers: [0, 2, 4] },
+                { id: 'c2', text: "Sebagai seorang sejarawan yang meneliti faktor penyebab berkembangnya ilmu pengetahuan di masa Abbasiyah, Anda akan menemukan beberapa kondisi pendukung utama. Manakah dari kondisi berikut yang benar? (Pilih semua yang benar)", options: ["Dukungan finansial dari khalifah untuk para peneliti", "Adanya gerakan penaklukan militer ke Eropa Barat", "Stabilitas politik dan pertumbuhan ekonomi kota", "Toleransi terhadap ilmuwan non-Muslim", "Larangan keras terhadap ilmu filsafat Yunani"], answers: [0, 2, 3] },
+                { id: 'c3', text: "Perkembangan ilmu agama Islam juga mencapai puncaknya pada masa ini, termasuk ilmu hadis dan fikih. Identifikasi pernyataan yang benar terkait ilmuwan agama pada masa Abbasiyah! (Pilih semua yang benar)", options: ["Imam Bukhari menyusun kitab Shahih Bukhari", "Imam Syafi'i merumuskan ilmu Ushul Fikih", "Jabir bin Hayyan menulis kitab tafsir Al-Qur'an", "Lahirnya empat mazhab fiqih besar (Hanafi, Maliki, Syafi'i, Hanbali)", "Al-Khawarizmi menetapkan hukum faraid (waris) secara eksklusif"], answers: [0, 1, 3] },
+                { id: 'c4', text: "Baitul Hikmah bukan sekadar perpustakaan, melainkan pusat peradaban. Kegiatan apa saja yang secara rutin berlangsung di institusi ini pada masa Al-Ma'mun? (Pilih semua yang benar)", options: ["Penerjemahan naskah kuno", "Latihan tempur militer", "Observasi astronomi", "Diskusi dan debat ilmiah", "Pusat perdagangan rempah"], answers: [0, 2, 3] },
+                { id: 'c5', text: "Jika Anda mengamati tokoh-tokoh kedokteran Abbasiyah, mereka memiliki kontribusi spesifik yang mengubah dunia medis. Manakah dari pasangan tokoh dan kontribusinya yang benar di bawah ini? (Pilih semua yang benar)", options: ["Ibnu Sina: Menulis Qanun fi at-Tibb", "Ar-Razi: Menemukan perbedaan cacar air dan campak", "Al-Kindi: Ahli bedah pertama", "Hunayn bin Ishaq: Penerjemah karya Galen (Galenus)", "Ibnu Khaldun: Penemu sistem peredaran darah"], answers: [0, 1, 3] },
+                { id: 'c6', text: "Kota Baghdad dirancang dengan sangat strategis dan memiliki fasilitas publik yang lengkap. Fasilitas apa saja yang umum ditemukan di pusat-pusat kota pada masa keemasan Abbasiyah? (Pilih semua yang benar)", options: ["Bimaristan (Rumah Sakit)", "Pabrik Kertas", "Bandar Udara", "Kuttab (Sekolah Dasar)", "Perpustakaan Umum"], answers: [0, 1, 3, 4] },
+                { id: 'c7', text: "Runtuhnya Daulah Abbasiyah merupakan akumulasi dari berbagai faktor internal dan eksternal. Manakah yang termasuk faktor internal kemunduran tersebut? (Pilih semua yang benar)", options: ["Serangan tentara Mongol", "Perebutan kekuasaan antar keluarga istana", "Gaya hidup mewah para penguasa", "Ekspansi militer Romawi Timur", "Munculnya dinasti-dinasti kecil yang memerdekakan diri"], answers: [1, 2, 4] },
+                { id: 'c8', text: "Seni dan arsitektur juga berkembang pesat sebagai wujud keindahan budaya Islam. Ciri khas seni yang berkembang pada masa Abbasiyah antara lain... (Pilih semua yang benar)", options: ["Seni Kaligrafi", "Seni Patung manusia berukuran nyata", "Arsitektur Masjid dengan menara khas (misal: Malwiya di Samarra)", "Seni Arabesque (ornamen geometris/flora)", "Seni lukis wajah khalifah di fasilitas umum"], answers: [0, 2, 3] },
+                { id: 'c9', text: "Peran wanita juga terlihat dalam beberapa aspek pada masa Abbasiyah, salah satunya adalah Zubaydah (istri Harun Ar-Rasyid). Apa saja kontribusi penting yang terkait dengan namanya? (Pilih semua yang benar)", options: ["Memimpin pasukan perang melawan Bizantium", "Membangun saluran air bagi jamaah haji (Mata Air Zubaydah)", "Mendanai pembangunan fasilitas umum di rute Mekkah", "Menjadi khalifah wanita pertama", "Mengembangkan kesusastraan istana"], answers: [1, 2, 4] },
+                { id: 'c10', text: "Gerakan penerjemahan buku-buku asing memberikan dampak luar biasa. Dari bahasa dan peradaban mana saja buku-buku tersebut umumnya diterjemahkan ke dalam bahasa Arab? (Pilih semua yang benar)", options: ["Yunani", "Sanskerta (India)", "Pahlavi (Persia)", "Suryani (Suriah Kuno)", "Latin Kuno (Amerika Selatan)"], answers: [0, 1, 2, 3] }
+            ],
+            matching: [
+                { id: 'mt1', prompt: "Tokoh yang dikenal sebagai Bapak Aljabar dan menemukan angka nol.", answer: "Al-Khawarizmi" },
+                { id: 'mt2', prompt: "Dokter terkemuka penulis ensiklopedia medis 'Al-Hawi' dan peneliti cacar.", answer: "Ar-Razi" },
+                { id: 'mt3', prompt: "Bapak Kimia Islam yang menemukan teknik distilasi.", answer: "Jabir bin Hayyan" },
+                { id: 'mt4', prompt: "Filsuf muslim yang dijuluki Guru Kedua setelah Aristoteles.", answer: "Al-Farabi" },
+                { id: 'mt5', prompt: "Penulis 'Qanun fi at-Tibb', rujukan utama kedokteran Eropa berabad-abad.", answer: "Ibnu Sina" },
+                { id: 'mt6', prompt: "Filsuf Arab pertama yang juga ahli dalam matematika dan musik.", answer: "Al-Kindi" },
+                { id: 'mt7', prompt: "Astronom muslim penemu kemiringan ekliptika bumi.", answer: "Al-Battani" },
+                { id: 'mt8', prompt: "Khalifah yang membangun Baitul Hikmah secara maksimal.", answer: "Al-Ma'mun" },
+                { id: 'mt9', prompt: "Pendiri Daulah Abbasiyah yang memindahkan pusat pemerintahan pertama kali.", answer: "As-Saffah" },
+                { id: 'mt10', prompt: "Khalifah masa keemasan yang membangun rumah sakit dan dekat dengan rakyat.", answer: "Harun ar-Rasyid" }
+            ]
+        };
+
+        const matchingOptions = [
+            "Al-Khawarizmi", "Ar-Razi", "Jabir bin Hayyan", "Al-Farabi", "Ibnu Sina", 
+            "Al-Kindi", "Al-Battani", "Al-Ma'mun", "As-Saffah", "Harun ar-Rasyid"
+        ]; // We will shuffle this for the UI
+
+        function saveData() {
+            // In a real app this would sync to Cloud. Here it's session-based.
+        }
+
+        function generateId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        function shuffleArray(array) {
+            let currentIndex = array.length,  randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function initApp() {
+            renderLogin();
+        }
+
+        function showMessage(msg, isError = false) {
+            const modal = document.createElement('div');
+            modal.className = `fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 z-50`;
+            modal.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 transform transition-all">
+                    <h3 class="text-lg font-bold mb-2 ${isError ? 'text-red-600' : 'text-emerald-600'}">${isError ? 'Peringatan' : 'Informasi'}</h3>
+                    <p class="text-slate-700 mb-6">${msg}</p>
+                    <div class="flex justify-end">
+                        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">Tutup</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function renderLogin() {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col items-center">
+                        <div class="w-full bg-emerald-800 p-6 flex flex-col items-center">
+                            <img src="${appState.settings.logoUrl}" alt="Logo" class="h-20 mb-3 object-contain rounded-md" onerror="this.src='https://placehold.co/100x100/166534/ffffff?text=LOGO'">
+                            <h1 class="text-xl font-bold text-white text-center leading-tight">${APP_TITLE}</h1>
+                            <p class="text-emerald-100 text-sm mt-1">Oleh: ${CREATOR}</p>
+                        </div>
+                        
+                        <div class="p-6 w-full">
+                            <div class="flex mb-6 border-b">
+                                <button id="tab-student" class="flex-1 pb-2 border-b-2 border-emerald-600 text-emerald-800 font-semibold transition">Siswa</button>
+                                <button id="tab-admin" class="flex-1 pb-2 border-b-2 border-transparent text-slate-400 font-semibold transition">Admin</button>
+                            </div>
+
+                            <!-- Student Form -->
+                            <form id="student-login" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap (Username)</label>
+                                    <input type="text" id="stud-name" required class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Kelas</label>
+                                    <select id="stud-class" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-slate-50">
+                                        <option value="VIII">Kelas VIII (Delapan)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nomor Presensi (Password)</label>
+                                    <input type="number" id="stud-presensi" required min="1" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-2 rounded hover:bg-emerald-700 transition">Masuk sebagai Siswa</button>
+                            </form>
+
+                            <!-- Admin Form -->
+                            <form id="admin-login" class="space-y-4 hidden">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Username Admin</label>
+                                    <input type="text" id="admin-username" required class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                                    <input type="password" id="admin-pass" required class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                </div>
+                                <button type="submit" class="w-full bg-slate-800 text-white font-bold py-2 rounded hover:bg-slate-900 transition">Masuk sebagai Admin</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Tab logic
+            const tabStudent = document.getElementById('tab-student');
+            const tabAdmin = document.getElementById('tab-admin');
+            const formStudent = document.getElementById('student-login');
+            const formAdmin = document.getElementById('admin-login');
+
+            tabStudent.addEventListener('click', () => {
+                tabStudent.classList.add('border-emerald-600', 'text-emerald-800');
+                tabStudent.classList.remove('border-transparent', 'text-slate-400');
+                tabAdmin.classList.remove('border-emerald-600', 'text-emerald-800');
+                tabAdmin.classList.add('border-transparent', 'text-slate-400');
+                formStudent.classList.remove('hidden');
+                formAdmin.classList.add('hidden');
+            });
+
+            tabAdmin.addEventListener('click', () => {
+                tabAdmin.classList.add('border-emerald-600', 'text-emerald-800');
+                tabAdmin.classList.remove('border-transparent', 'text-slate-400');
+                tabStudent.classList.remove('border-emerald-600', 'text-emerald-800');
+                tabStudent.classList.add('border-transparent', 'text-slate-400');
+                formAdmin.classList.remove('hidden');
+                formStudent.classList.add('hidden');
+            });
+
+            formStudent.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('stud-name').value.trim();
+                const presensi = document.getElementById('stud-presensi').value.trim();
+                
+                const studentKey = `${presensi}_${name}`;
+                if (!appState.students[studentKey]) {
+                    appState.students[studentKey] = { attempts: 0, scores: [] };
+                }
+
+                if (appState.students[studentKey].attempts >= 2) {
+                    showMessage("Anda sudah mencapai batas maksimal pengerjaan (2 kali).");
+                    return;
+                }
+
+                appState.currentUser = { role: 'student', name, presensi, kelas: 'VIII', key: studentKey };
+                renderStudentDashboard();
+            });
+
+            formAdmin.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const u = document.getElementById('admin-username').value;
+                const p = document.getElementById('admin-pass').value;
+                if (u === appState.admin.username && p === appState.admin.password) {
+                    appState.currentUser = { role: 'admin', name: 'Administrator' };
+                    renderAdminDashboard();
+                } else {
+                    showMessage("Username atau password admin salah!", true);
+                }
+            });
+        }
+
+        function renderAdminDashboard() {
+            if (appState.currentUser.role !== 'admin') return;
+
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="p-4 flex flex-col h-full">
+                    <header class="bg-slate-800 text-white p-4 rounded-lg flex justify-between items-center mb-6 shadow">
+                        <div>
+                            <h2 class="text-xl font-bold">Panel Admin - ${APP_TITLE}</h2>
+                            <p class="text-sm text-slate-300">Mode Guru / Administrator</p>
+                        </div>
+                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-sm font-medium transition">Keluar</button>
+                    </header>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
+                        <!-- Sidebar -->
+                        <div class="space-y-4">
+                            <div class="bg-white p-4 rounded-lg shadow border border-slate-100">
+                                <h3 class="font-bold text-slate-800 mb-3 border-b pb-2">Aksi Cepat</h3>
+                                <button onclick="startTestMode()" class="w-full mb-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 py-2 rounded text-sm font-medium transition border border-emerald-300 flex justify-center items-center gap-2">
+                                    Uji Coba Aplikasi (Sebagai Siswa)
+                                </button>
+                                <button onclick="alert('Fitur penyimpanan cloud belum aktif. Hubungi developer untuk integrasi Firebase jika ingin data nilai tersimpan permanen.')" class="w-full bg-blue-50 text-blue-800 hover:bg-blue-100 py-2 rounded text-sm font-medium transition border border-blue-200">
+                                    Unduh Rekap Nilai (CSV)
+                                </button>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg shadow border border-slate-100">
+                                <h3 class="font-bold text-slate-800 mb-3 border-b pb-2">Pengaturan</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-500 mb-1">URL Logo Instansi</label>
+                                        <input type="text" id="setting-logo" value="${appState.settings.logoUrl}" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-emerald-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-500 mb-1">Password Admin Baru</label>
+                                        <input type="text" id="setting-pass" placeholder="Biarkan kosong jika tidak diubah" class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-emerald-500">
+                                    </div>
+                                    <button onclick="saveSettings()" class="w-full bg-slate-800 text-white py-2 rounded text-sm hover:bg-slate-700 transition">Simpan Pengaturan</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Content (Questions Editor) -->
+                        <div class="md:col-span-2 bg-white rounded-lg shadow border border-slate-100 p-4 flex flex-col h-[70vh]">
+                            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                <h3 class="font-bold text-slate-800 text-lg">Editor Soal (Preview)</h3>
+                                <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full font-medium">Total: 35 Soal</span>
+                            </div>
+                            
+                            <div class="overflow-y-auto flex-grow custom-scrollbar pr-2 space-y-6">
+                                <div>
+                                    <h4 class="font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded">Pilihan Ganda (15 Soal)</h4>
+                                    <ul class="mt-2 space-y-2 text-sm">
+                                        ${questionBank.mc.map((q, i) => `
+                                            <li class="border border-slate-200 p-3 rounded hover:bg-slate-50">
+                                                <p class="font-medium mb-2">${i+1}. ${q.text}</p>
+                                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                                    ${q.options.map((opt, idx) => `<div class="${idx === q.answer ? 'text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 p-1 rounded' : 'text-slate-600 p-1'}">${String.fromCharCode(65+idx)}. ${opt}</div>`).join('')}
+                                                </div>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 class="font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded">Pilihan Ganda Kompleks (10 Soal)</h4>
+                                    <ul class="mt-2 space-y-2 text-sm">
+                                        ${questionBank.complex.map((q, i) => `
+                                            <li class="border border-slate-200 p-3 rounded hover:bg-slate-50">
+                                                <p class="font-medium mb-2">${i+16}. ${q.text}</p>
+                                                <div class="space-y-1 text-xs">
+                                                    ${q.options.map((opt, idx) => `<div class="${q.answers.includes(idx) ? 'text-emerald-700 font-bold' : 'text-slate-600'} flex items-start gap-2">
+                                                        <span class="mt-0.5">${q.answers.includes(idx) ? '☑' : '☐'}</span> <span>${opt}</span>
+                                                    </div>`).join('')}
+                                                </div>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 class="font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded">Menjodohkan (10 Soal)</h4>
+                                    <ul class="mt-2 space-y-2 text-sm">
+                                        ${questionBank.matching.map((q, i) => `
+                                            <li class="border border-slate-200 p-3 rounded hover:bg-slate-50 flex flex-col md:flex-row gap-2">
+                                                <div class="flex-1 font-medium">${i+26}. ${q.prompt}</div>
+                                                <div class="flex-1 bg-emerald-50 text-emerald-800 p-2 rounded border border-emerald-200 text-xs font-bold flex items-center">=> ${q.answer}</div>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-3 border-t text-xs text-slate-500 italic">
+                                *Untuk mengubah teks soal secara mendalam, harap hubungi teknisi/developer agar struktur data (JSON) tidak rusak.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveSettings() {
+            const logo = document.getElementById('setting-logo').value.trim();
+            const pass = document.getElementById('setting-pass').value.trim();
+            
+            if(logo) appState.settings.logoUrl = logo;
+            if(pass) appState.admin.password = pass;
+            
+            showMessage("Pengaturan berhasil disimpan.");
+        }
+
+        function startTestMode() {
+            appState.currentUser = { role: 'student', name: 'GURU (Uji Coba)', presensi: '00', kelas: 'VIII', key: 'TEST_GURU' };
+            if (!appState.students['TEST_GURU']) {
+                appState.students['TEST_GURU'] = { attempts: 0, scores: [] };
+            }
+            renderStudentDashboard();
+        }
+
+        function logout() {
+            if(appState.exam.isActive) {
+                // Ignore logout if exam is active, handled elsewhere or disabled.
+            }
+            appState.currentUser = null;
+            renderLogin();
+        }
+
+        function renderStudentDashboard() {
+            const app = document.getElementById('app');
+            const student = appState.currentUser;
+            const studentData = appState.students[student.key];
+            const attemptsLeft = student.key === 'TEST_GURU' ? 'Tak Terbatas' : (2 - studentData.attempts);
+
+            app.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl overflow-hidden">
+                        <div class="bg-emerald-700 p-6 text-white text-center">
+                            <h2 class="text-2xl font-bold">${APP_TITLE}</h2>
+                            <p class="text-emerald-100 mt-1">Kelas VIII - MTs Mu'allimin NU</p>
+                        </div>
+                        <div class="p-6 md:p-8">
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6 flex flex-col md:flex-row justify-between gap-4">
+                                <div>
+                                    <p class="text-sm text-slate-500">Nama Siswa</p>
+                                    <p class="font-bold text-slate-800 text-lg">${student.name}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-500">No. Presensi</p>
+                                    <p class="font-bold text-slate-800 text-lg">${student.presensi}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-500">Sisa Kesempatan</p>
+                                    <p class="font-bold ${attemptsLeft === 0 ? 'text-red-600' : 'text-emerald-600'} text-lg">${attemptsLeft}</p>
+                                </div>
+                            </div>
+
+                            <div class="mb-8 space-y-2 text-slate-700">
+                                <h3 class="font-bold text-lg mb-3">Petunjuk Pengerjaan:</h3>
+                                <ul class="list-disc list-inside space-y-1 text-sm md:text-base">
+                                    <li>Berdoalah sebelum mengerjakan soal.</li>
+                                    <li>Waktu pengerjaan adalah <strong>90 Menit</strong>. Waktu akan berjalan otomatis saat Anda klik Mulai.</li>
+                                    <li>Terdapat 3 jenis soal: Pilihan Ganda (15), Pilihan Ganda Kompleks (10), dan Menjodohkan (10).</li>
+                                    <li>Periksa kembali jawaban sebelum menekan tombol Selesai.</li>
+                                    <li>Nilai Ketuntasan Minimal (KKM) adalah <strong>${KKM}</strong>.</li>
+                                </ul>
+                            </div>
+
+                            <div class="flex flex-col md:flex-row gap-4 justify-end">
+                                ${student.role === 'student' && student.key === 'TEST_GURU' ? `<button onclick="logout()" class="px-6 py-3 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300 transition">Kembali ke Admin</button>` : `<button onclick="logout()" class="px-6 py-3 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300 transition">Keluar</button>`}
+                                <button id="btn-start-exam" class="px-8 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition shadow-lg flex items-center justify-center gap-2 ${student.key !== 'TEST_GURU' && attemptsLeft <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${student.key !== 'TEST_GURU' && attemptsLeft <= 0 ? 'disabled' : ''}>
+                                    Mulai Ujian Sekarang
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('btn-start-exam').addEventListener('click', startExam);
+        }
+
+        function startExam() {
+            // Reset exam state
+            appState.exam.isActive = true;
+            appState.exam.timeLeft = TIME_LIMIT;
+            appState.exam.answers = {};
+            
+            // Record attempt if real student
+            if(appState.currentUser.key !== 'TEST_GURU') {
+                appState.students[appState.currentUser.key].attempts += 1;
+            }
+
+            renderExamInterface();
+
+            // Start timer
+            appState.exam.timerInterval = setInterval(() => {
+                appState.exam.timeLeft--;
+                updateTimerDisplay();
+                if (appState.exam.timeLeft <= 0) {
+                    clearInterval(appState.exam.timerInterval);
+                    finishExam();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const el = document.getElementById('timer-display');
+            if(!el) return;
+            const m = Math.floor(appState.exam.timeLeft / 60).toString().padStart(2, '0');
+            const s = (appState.exam.timeLeft % 60).toString().padStart(2, '0');
+            el.innerText = `${m}:${s}`;
+            
+            if (appState.exam.timeLeft < 300) { // Less than 5 mins
+                el.classList.add('text-red-600', 'animate-pulse');
+            }
+        }
+
+        function renderExamInterface() {
+            const app = document.getElementById('app');
+            const user = appState.currentUser;
+            
+            // Generate shuffled options for matching
+            const shuffledMatchingOptions = shuffleArray([...matchingOptions]);
+
+            app.innerHTML = `
+                <div class="h-full flex flex-col print-container bg-white md:bg-transparent">
+                    <!-- Header (Sticky) -->
+                    <div class="bg-white shadow-sm border-b sticky top-0 z-10 p-4 flex justify-between items-center no-print">
+                        <div class="flex items-center gap-3">
+                            <img src="${appState.settings.logoUrl}" class="h-10 hidden sm:block">
+                            <div>
+                                <div class="font-bold text-slate-800">${user.name} <span class="text-xs font-normal text-slate-500">(No. ${user.presensi})</span></div>
+                                <div class="text-xs text-slate-500">SKI Kls VIII</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="bg-slate-100 px-4 py-2 rounded-lg border font-mono text-lg font-bold flex items-center gap-2">
+                                ⏱ <span id="timer-display">90:00</span>
+                            </div>
+                            <button onclick="confirmFinish()" class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 font-medium">Selesai</button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Questions Area -->
+                    <div class="flex-grow overflow-y-auto p-4 md:p-6 pb-24 custom-scrollbar no-print">
+                        <div class="max-w-4xl mx-auto space-y-10">
+                            
+                            <!-- Bagian I: Pilihan Ganda -->
+                            <section class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-200">
+                                <div class="border-b pb-4 mb-6">
+                                    <h2 class="text-xl font-bold text-emerald-800">Bagian I: Pilihan Ganda</h2>
+                                    <p class="text-slate-500 text-sm">Pilihlah satu jawaban yang paling tepat! (Skor: 2/soal)</p>
+                                </div>
+                                <div class="space-y-8">
+                                    ${questionBank.mc.map((q, i) => `
+                                        <div class="question-block" id="q-${q.id}">
+                                            <p class="font-medium text-slate-800 mb-3 text-justify leading-relaxed"><span class="font-bold mr-1">${i+1}.</span> ${q.text}</p>
+                                            <div class="space-y-2 pl-5">
+                                                ${q.options.map((opt, idx) => `
+                                                    <label class="flex items-start gap-3 p-2 rounded cursor-pointer hover:bg-slate-50 transition border border-transparent hover:border-slate-200">
+                                                        <input type="radio" name="${q.id}" value="${idx}" onchange="saveAnswer('${q.id}', ${idx})" class="mt-1 w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                                                        <span class="text-slate-700"><span class="font-medium mr-2">${String.fromCharCode(65+idx)}.</span> ${opt}</span>
+                                                    </label>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </section>
+
+                            <!-- Bagian II: Pilihan Ganda Kompleks -->
+                            <section class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-200">
+                                <div class="border-b pb-4 mb-6">
+                                    <h2 class="text-xl font-bold text-emerald-800">Bagian II: Pilihan Ganda Kompleks</h2>
+                                    <p class="text-slate-500 text-sm">Pilihlah DUA atau LEBIH jawaban yang benar! (Skor penuh: 4/soal)</p>
+                                </div>
+                                <div class="space-y-8">
+                                    ${questionBank.complex.map((q, i) => `
+                                        <div class="question-block" id="q-${q.id}">
+                                            <p class="font-medium text-slate-800 mb-3 text-justify leading-relaxed"><span class="font-bold mr-1">${i+16}.</span> ${q.text}</p>
+                                            <div class="space-y-2 pl-5">
+                                                ${q.options.map((opt, idx) => `
+                                                    <label class="flex items-start gap-3 p-2 rounded cursor-pointer hover:bg-slate-50 transition border border-transparent hover:border-slate-200">
+                                                        <input type="checkbox" name="${q.id}" value="${idx}" onchange="saveComplexAnswer('${q.id}', ${idx}, this.checked)" class="mt-1 w-4 h-4 text-emerald-600 focus:ring-emerald-500 rounded text-emerald-600">
+                                                        <span class="text-slate-700">${opt}</span>
+                                                    </label>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </section>
+
+                            <!-- Bagian III: Menjodohkan -->
+                            <section class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-200">
+                                <div class="border-b pb-4 mb-6">
+                                    <h2 class="text-xl font-bold text-emerald-800">Bagian III: Menjodohkan</h2>
+                                    <p class="text-slate-500 text-sm">Pilih pasangan yang tepat untuk pernyataan di bawah ini! (Skor: 3/soal)</p>
+                                </div>
+                                <div class="space-y-6">
+                                    ${questionBank.matching.map((q, i) => `
+                                        <div class="flex flex-col md:flex-row gap-4 items-start md:items-center p-3 rounded-lg bg-slate-50 border border-slate-100" id="q-${q.id}">
+                                            <div class="flex-1 font-medium text-slate-700"><span class="font-bold mr-1">${i+26}.</span> ${q.prompt}</div>
+                                            <div class="w-full md:w-64 shrink-0">
+                                                <select onchange="saveAnswer('${q.id}', this.value)" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white">
+                                                    <option value="" disabled selected>-- Pilih Pasangan --</option>
+                                                    ${shuffledMatchingOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </section>
+
+                        </div>
+                    </div>
+                    
+                    <!-- Footer / Submit Bar -->
+                    <div class="fixed bottom-0 left-0 w-full bg-white border-t p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex justify-center no-print">
+                        <button onclick="confirmFinish()" class="w-full max-w-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition transform hover:-translate-y-1">Selesai & Kumpulkan</button>
+                    </div>
+                </div>
+            `;
+            updateTimerDisplay();
+        }
+
+        function saveAnswer(qId, val) {
+            appState.exam.answers[qId] = val;
+        }
+
+        function saveComplexAnswer(qId, val, isChecked) {
+            if (!appState.exam.answers[qId]) {
+                appState.exam.answers[qId] = [];
+            }
+            if (isChecked) {
+                appState.exam.answers[qId].push(val);
+            } else {
+                appState.exam.answers[qId] = appState.exam.answers[qId].filter(v => v !== val);
+            }
+        }
+
+        function confirmFinish() {
+            // Count answered
+            const totalQuestions = 35;
+            let answered = 0;
+            
+            // Check MC & Matching
+            questionBank.mc.forEach(q => { if(appState.exam.answers[q.id] !== undefined) answered++; });
+            questionBank.matching.forEach(q => { if(appState.exam.answers[q.id] !== undefined && appState.exam.answers[q.id] !== "") answered++; });
+            // Check Complex
+            questionBank.complex.forEach(q => { if(appState.exam.answers[q.id] && appState.exam.answers[q.id].length > 0) answered++; });
+
+            let msg = `Anda telah menjawab ${answered} dari ${totalQuestions} soal.\nApakah Anda yakin ingin menyelesaikan ujian?`;
+            
+            // Custom confirm modal
+            const modal = document.createElement('div');
+            modal.className = `fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-60 z-50`;
+            modal.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4">
+                    <h3 class="text-xl font-bold mb-3 text-slate-800">Konfirmasi Selesai</h3>
+                    <p class="text-slate-600 mb-6">${msg}</p>
+                    <div class="flex gap-3 justify-end">
+                        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-slate-200 text-slate-700 font-medium rounded hover:bg-slate-300">Batal</button>
+                        <button onclick="finishExam(); this.closest('.fixed').remove()" class="px-4 py-2 bg-emerald-600 text-white font-medium rounded hover:bg-emerald-700">Ya, Kumpulkan</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function finishExam() {
+            clearInterval(appState.exam.timerInterval);
+            appState.exam.isActive = false;
+
+            // Calculate Score
+            let score = 0;
+            let details = { mc: 0, complex: 0, matching: 0 };
+
+            // 1. MC (15 questions * 2 = 30)
+            questionBank.mc.forEach(q => {
+                if (parseInt(appState.exam.answers[q.id]) === q.answer) {
+                    score += 2;
+                    details.mc++;
+                }
+            });
+
+            // 2. Complex (10 questions * 4 = 40)
+            // Scoring logic: must get ALL correct to get 4 points, or partial scoring?
+            // To make it simple & standard: Must match exact array (order agnostic) to get 4.
+            questionBank.complex.forEach(q => {
+                const userAns = appState.exam.answers[q.id] || [];
+                const correctAns = q.answers;
+                // Check if arrays have same elements
+                const isCorrect = userAns.length === correctAns.length && 
+                                  userAns.every(val => correctAns.includes(parseInt(val)));
+                if (isCorrect) {
+                    score += 4;
+                    details.complex++;
+                }
+            });
+
+            // 3. Matching (10 questions * 3 = 30)
+            questionBank.matching.forEach(q => {
+                if (appState.exam.answers[q.id] === q.answer) {
+                    score += 3;
+                    details.matching++;
+                }
+            });
+
+            // Save score to student profile (in-memory)
+            if(appState.currentUser.key !== 'TEST_GURU') {
+                appState.students[appState.currentUser.key].scores.push({
+                    date: new Date().toLocaleString(),
+                    score: score,
+                    details: details
+                });
+            }
+
+            renderResult(score, details);
+        }
+
+        function renderResult(score, details) {
+            const app = document.getElementById('app');
+            const user = appState.currentUser;
+            const isPassed = score >= KKM;
+
+            app.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center p-4 bg-slate-100 print:bg-white print:p-0">
+                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden print:shadow-none print:max-w-full">
+                        
+                        <!-- Certificate Header -->
+                        <div class="bg-emerald-800 p-8 text-white text-center print:bg-white print:text-black print:border-b-2 print:border-black">
+                            <div class="flex justify-center mb-4">
+                                <img src="${appState.settings.logoUrl}" class="h-20 object-contain bg-white p-2 rounded-lg print:grayscale">
+                            </div>
+                            <h2 class="text-3xl font-bold mb-2 uppercase tracking-wide">Hasil Asesmen Sumatif</h2>
+                            <p class="text-emerald-200 print:text-slate-600 text-lg">Sejarah Kebudayaan Islam - Kelas VIII</p>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="p-8">
+                            <div class="grid grid-cols-2 gap-y-4 mb-8 text-sm md:text-base">
+                                <div class="text-slate-500 font-medium print:text-black">Nama Lengkap</div>
+                                <div class="font-bold text-slate-800 text-right print:text-black">${user.name}</div>
+                                
+                                <div class="text-slate-500 font-medium print:text-black">No. Presensi</div>
+                                <div class="font-bold text-slate-800 text-right print:text-black">${user.presensi}</div>
+                                
+                                <div class="text-slate-500 font-medium print:text-black">Waktu Selesai</div>
+                                <div class="font-bold text-slate-800 text-right print:text-black">${new Date().toLocaleString('id-ID')}</div>
+                            </div>
+
+                            <div class="text-center mb-8 border-t border-b py-8 bg-slate-50 print:bg-transparent">
+                                <div class="text-sm font-bold text-slate-500 mb-2 uppercase tracking-widest">Skor Akhir</div>
+                                <div class="text-7xl font-black ${isPassed ? 'text-emerald-600' : 'text-red-500'} print:text-black">
+                                    ${score}
+                                </div>
+                                <div class="mt-4 inline-block px-4 py-1 rounded-full text-sm font-bold ${isPassed ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'} print:border print:border-black">
+                                    ${isPassed ? 'LULUS (Memenuhi KKM)' : 'TIDAK LULUS (Di bawah KKM)'}
+                                </div>
+                            </div>
+
+                            <!-- Detail Rincian -->
+                            <div class="mb-8 hidden md:block print:block">
+                                <h3 class="font-bold text-slate-700 mb-3 print:text-black">Rincian Jawaban Benar:</h3>
+                                <div class="flex justify-between items-center p-3 bg-slate-50 rounded mb-2 print:border">
+                                    <span>Pilihan Ganda</span>
+                                    <span class="font-bold">${details.mc} / 15</span>
+                                </div>
+                                <div class="flex justify-between items-center p-3 bg-slate-50 rounded mb-2 print:border">
+                                    <span>Pilihan Ganda Kompleks</span>
+                                    <span class="font-bold">${details.complex} / 10</span>
+                                </div>
+                                <div class="flex justify-between items-center p-3 bg-slate-50 rounded mb-2 print:border">
+                                    <span>Menjodohkan</span>
+                                    <span class="font-bold">${details.matching} / 10</span>
+                                </div>
+                            </div>
+
+                            <!-- Signatures for Print -->
+                            <div class="mt-12 flex justify-between print-only text-center">
+                                <div>
+                                    <p class="mb-16 text-sm">Mengetahui,</p>
+                                    <p class="font-bold underline">Kepala Madrasah</p>
+                                </div>
+                                <div>
+                                    <p class="mb-16 text-sm">Guru Mata Pelajaran,</p>
+                                    <p class="font-bold underline">${CREATOR}</p>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center no-print mt-8">
+                                <button onclick="window.print()" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow flex items-center justify-center gap-2">
+                                    🖨️ Cetak / Unduh PDF
+                                </button>
+                                ${user.key === 'TEST_GURU' 
+                                    ? `<button onclick="renderAdminDashboard()" class="px-6 py-3 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition shadow">Kembali ke Admin</button>`
+                                    : `<button onclick="logout()" class="px-6 py-3 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300 transition shadow">Keluar</button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize App on load
+        window.onload = () => {
+            initApp();
+        };
+
+    </script>
+</body>
+</html>
